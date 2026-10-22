@@ -94,7 +94,7 @@ stateDiagram-v2
     state "파일 변경 적용" as Applying
     state "빌드 및 테스트" as Validating
     state "오류 수정 요청" as Fixing
-    state "중단 처리" as Stopping
+    state "중단 요청 처리" as Stopping
     state "결과 수집" as Collecting
     state "완료" as Completed
     state "실패" as Failed
