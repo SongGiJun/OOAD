@@ -150,8 +150,9 @@ stateDiagram-v2
 
 
 ## 상태 다이어그램 개선버전
-```
-stateDiagram-v2
+
+```mermaid
+stateDiagram-v3
     direction TB
     state "대기" as Idle
     state "실행 중" as Running
