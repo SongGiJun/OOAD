@@ -147,3 +147,53 @@ stateDiagram-v2
 - 시퀀스의 반복 구간은 정상 실행과 자동 수정 재시도를 요약한 것입니다. 권한 거부 시에는 빌드/테스트로 진행하지 않고 실패 결과를 수집하도록 구현해야 합니다.
 - 현재 클래스 다이어그램에는 AgentExecutor.stop()에서 실행 중인 CommandTool / Sandbox.terminate()로 중단을 전달하는 명시적 API가 없습니다. 즉시 명령 취소가 필요하면 CommandTool 또는 Tool의 cancel/stop 인터페이스를 설계해야 합니다.
 - 중단은 LLM 호출 중에도 요청될 수 있으므로 `stopRequested`의 동시성 안전성과 취소 확인 지점을 구현에서 정의해야 합니다.
+
+
+## 상태 다이어그램 개선버전
+stateDiagram-v2
+    direction TB
+    state "대기" as Idle
+    state "실행 중" as Running
+    state "중단 대기" as Stopping
+    state "결과 수집" as Collecting
+    state "완료" as Completed
+    state "실패" as Failed
+    state "중단됨" as Stopped
+
+    [*] --> Idle
+    Idle --> Running: run(prompt) / 실행 컨텍스트 초기화
+
+    state Running {
+        state "컨텍스트 구성" as Context
+        state "계획 생성 요청" as Planning
+        state "변경안 생성 요청" as RequestChanges
+        state "파일 변경 적용" as Applying
+        state "빌드 및 테스트" as Validating
+        state "오류 수정 요청" as Fixing
+
+        [*] --> Context
+        Context --> Planning: 컨텍스트 구성 성공
+        Planning --> RequestChanges: 계획 응답 수락
+        RequestChanges --> Applying: 변경안 응답 수락
+        Applying --> Validating: 변경 적용 완료
+        Validating --> Fixing: 검증 실패 및 재시도 가능
+        Fixing --> Applying: 수정안 응답 수락 / retryCount++
+    }
+
+    Running --> Stopping: stop() / 중단 요청 등록
+    Stopping --> Collecting: 진행 중 작업이 안전 지점에 도달 / 중단 확정
+
+    Validating --> Collecting: 검증 통과 / 성공 확정
+    Validating --> Collecting: 검증 실패 및 재시도 소진 / 실패 확정
+    Context --> Collecting: 컨텍스트 구성 실패
+    Planning --> Collecting: 계획 요청 실패
+    RequestChanges --> Collecting: 변경안 요청 실패
+    Applying --> Collecting: 정책 거부 또는 변경 적용 실패
+    Fixing --> Collecting: 수정안 요청 실패
+
+    Collecting --> Completed: 성공
+    Collecting --> Failed: 실패
+    Collecting --> Stopped: 중단
+    Completed --> [*]
+    Failed --> [*]
+    Stopped --> [*]
