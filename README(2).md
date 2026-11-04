@@ -131,3 +131,27 @@ stateDiagram-v2
     Failed --> [*]
     Stopped --> [*]
 ```
+
+
+```
+sequenceDiagram
+    autonumber
+    participant Agent as AgentExecutor
+    participant Client as LLMClient
+    participant API as LLM API (External System)
+    participant Result as ResultCollector
+    Agent->>Agent: requestPlan()
+    Agent->>Client: requestPlan(context)
+    Client->>API: 개발 요청 + ProjectContext
+    alt LLM API 응답 성공
+        API-->>Client: ExecutionPlan
+        Client-->>Agent: ExecutionPlan
+        Agent->>Agent: currentPlan = plan
+        Note over Agent: 계획에 따른 작업 및 도구 호출 준비
+    else LLM API 요청 실패
+        API-->>Client: API error
+        Client-->>Agent: error
+        Agent->>Result: recordError(message)
+        Agent->>Agent: status = FAILED
+    end
+```
